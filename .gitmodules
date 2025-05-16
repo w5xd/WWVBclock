@@ -1,0 +1,3 @@
+[submodule "ArduinoLibraries"]
+	path = ArduinoLibraries
+	url = https://github.com/w5xd/ArduinoLibraries.git
