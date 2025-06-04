@@ -37,7 +37,6 @@ namespace {
 PacketWeather::PacketWeather(int nSS_pin, int int_Pin) 
     : radio(nSS_pin, int_Pin)
     , radioSetupOK(false)
-    , m_prevRgF(0x7FFF) // far away from expected responses
     , indoorTemperatureSensorMask(0)
     , outdoorTemperatureSensorMask(0)
     , raingaugeSensorMask(0)
@@ -180,20 +179,8 @@ bool PacketWeather::ProcessCommand(const char* cmd, uint8_t len, uint8_t senderi
                 auto rg = atoi(isRG + 5);
                 if (rg != 0)
                 {
-                    auto f = atoi(isF + 4);
-                    int16_t diffF = m_prevRgF - f;
-                    DEBUG_OUTPUT1(" m_prevRgF=");
-                    DEBUG_OUTPUT1(m_prevRgF);
-                    DEBUG_OUTPUT1(" diffF=");
-                    DEBUG_OUTPUT1(diffF);
-                    if (diffF < 0)
-                        diffF = -diffF;
-                    if (diffF >= 1000)
-                    {   // 1000 is magic number. that is what the Silicon Labs magnetometer reads
-                        m_prevRgF = f;
-                        if (m_clock)
-                            m_clock->notifyRainmm(rg);
-                    }
+                    if (m_clock)
+                        m_clock->notifyRainmm(rg);
                 }
                 else
                     return false;

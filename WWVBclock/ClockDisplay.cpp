@@ -388,8 +388,8 @@ void ClockDisplay::unitsInMetric(bool v)
 bool ClockDisplay::setRainGaugeCorrection(uint16_t t)
 {
     bool ret = false;
-    if (t >= 500 && t <= 2000)
-    {   // range 0.5 to 2.0 allowed for correction from 1 mm per mm
+    if (t >= 100 && t <= 10000)
+    {   // range 0.1 to 10.0 allowed for correction from 1 mm per mm
         m_rainGaugeCorrectionPerThousand = t;
         ret = true;
     }

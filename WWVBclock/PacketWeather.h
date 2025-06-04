@@ -20,7 +20,6 @@ class PacketWeather {
         RFM69 radio;
         RadioConfiguration radioConfiguration;
         bool radioSetupOK ;
-        int16_t m_prevRgF;
         uint32_t indoorTemperatureSensorMask;
         uint32_t outdoorTemperatureSensorMask;
         uint32_t raingaugeSensorMask;
