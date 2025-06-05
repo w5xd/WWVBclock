@@ -3,6 +3,24 @@
 #include <RFM69.h>
 #include "WWVBclock.h"
 
+class RFM69delayCanSend : public RFM69
+{
+    public:
+        RFM69delayCanSend(int nss, int irq) : RFM69(nss, irq, true)
+        {}
+        
+        bool canSend() override 
+        {       
+            /* this delay(1) is inspired by the  #ifdef ESP8266 in the library code
+                https://github.com/LowPowerLab/RFM69
+            */
+            auto ret = RFM69::canSend();
+            if (!ret)
+                delay(1);
+            return ret;
+        }
+};
+
 class PacketWeather {
     public: 
         PacketWeather(int nSS_pin, int int_Pin);
@@ -17,7 +35,7 @@ class PacketWeather {
         void MonitorRSSI(bool);
         bool ProcessCommand(const char* cmd, uint8_t len, uint8_t senderid, bool toMe);
     protected:
-        RFM69 radio;
+        RFM69delayCanSend radio;
         RadioConfiguration radioConfiguration;
         bool radioSetupOK ;
         uint32_t indoorTemperatureSensorMask;

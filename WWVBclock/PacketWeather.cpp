@@ -52,7 +52,7 @@ void ::PacketWeather::setNotify(ClockNotification*p)
 
 void PacketWeather::setup()
 {
-     if (radioConfiguration.NodeId() != 0xff &&
+    if (radioConfiguration.NodeId() != 0xff &&
         radioConfiguration.NetworkId() != 0xff)
     {
         bool ok = radio.initialize(radioConfiguration.FrequencyBandId(),
@@ -65,8 +65,6 @@ void PacketWeather::setup()
             radio.spyMode(true);
             radioSetupOK = radio.getFrequency() != 0;
         }
-#if USE_SERIAL
-#endif
     }
     else
     {
