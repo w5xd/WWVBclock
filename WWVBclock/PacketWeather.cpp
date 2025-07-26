@@ -96,8 +96,6 @@ void PacketWeather::radioPrintInfo()
     {
         Serial.print(F("FreqKHz="));
         Serial.println(radio.getFrequency()/1000);
-        Serial.print(F("Bitrate="));
-        Serial.println(radio.getBitRate());
     }
     else
         Serial.println("Radio init FAILED");
