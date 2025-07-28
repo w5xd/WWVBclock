@@ -41,6 +41,7 @@ PacketWeather::PacketWeather(int nSS_pin, int int_Pin)
     , outdoorTemperatureSensorMask(0)
     , raingaugeSensorMask(0)
     , m_monitorRSSI(false)
+    , prevRGcount(0xffffu) // most unlikely value 
     , m_sleepBegan(millis())
     , m_clock(0)
 {}
@@ -172,9 +173,14 @@ bool PacketWeather::ProcessCommand(const char* cmd, uint8_t len, uint8_t senderi
             DEBUG_OUTPUT1('\'');
             const char *isF = strstr(cmd, " F: ");
             const char *isRG = strstr(cmd, " RG: ");
-            if (isF != 0 && isRG != 0)
+            const char *isC = (cmd[0] == 'C' && cmd[1] == ':') == 0 ? cmd+2 : 0;
+            if (isF != 0 && isRG != 0 && isC != 0)
             {
                 auto rg = atoi(isRG + 5);
+                uint16_t rgCount = atoi(isC);
+                if (rgCount == prevRGcount)
+                    return true;    // filter out repeated spy message
+                prevRGcount = rgCount;
                 if (rg != 0)
                 {
                     if (m_clock)
