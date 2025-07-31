@@ -42,6 +42,7 @@ class PacketWeather {
         uint32_t outdoorTemperatureSensorMask;
         uint32_t raingaugeSensorMask;
         bool m_monitorRSSI;
+        uint16_t prevRGcount;
         unsigned long m_sleepBegan;
         ClockNotification *m_clock;
 };
