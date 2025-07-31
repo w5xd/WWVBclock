@@ -235,14 +235,12 @@ void PacketWeather::loop()
         bool toMe = radioConfiguration.NodeId() == targetId;
         auto ackR = radio.ACKRequested();
 
-    #if defined(DEBUG_TO_SERIAL)
+    #if USE_SERIAL > 0
         Serial.print('"');
         Serial.print(reportbuf);
         Serial.print("\" ");
-        Serial.print("Received. RSSI=");
-        Serial.print(rssi);
-        Serial.print(" now is: ");
-        Serial.print(rssi1);
+        Serial.print(" target:");
+        Serial.print(targetId);
         Serial.print(" node:");
         Serial.println(senderId);
     #endif
