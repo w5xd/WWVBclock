@@ -55,7 +55,7 @@ public:
 
 extern const char * const CLOCKCOMMANDS[];
 
-extern void routeCommand(const char *cmd, uint8_t len, uint8_t senderid = -1, bool toMe = true);
+extern bool routeCommand(const char *cmd, uint8_t len, uint8_t senderid = -1, bool toMe = true);
 extern void restoreAllSettings();
 extern int32_t aDecimalToInt(const char*& p);
 extern uint32_t aHexToInt(const char*&p);

@@ -770,21 +770,25 @@ static bool ProcessCommand(const char *cmd, uint8_t len)
    return false;
 }
 
-void routeCommand(const char *cmd, uint8_t len, uint8_t senderid, bool toMe)
+bool routeCommand(const char *cmd, uint8_t len, uint8_t senderid, bool toMe)
 {
     bool toPrint = toMe;
+    bool processed = false;
     if (packetWeather.ProcessCommand(cmd, len, senderid, toMe))
     {   
         toPrint = true;
 #if USE_SERIAL
         Serial.println(F("Command accepted for radio"));
 #endif
+        processed = true;
     }
     else if (toMe && ProcessCommand(cmd, len))
+    {
 #if USE_SERIAL
-        Serial.println(F("Command accepted for clock"))
+        Serial.println(F("Command accepted for clock"));
 #endif
-        ;
+        processed = true;
+    }
     else if (toMe)
 #if USE_SERIAL
         Serial.println(F("command not processed"))
@@ -804,6 +808,7 @@ void routeCommand(const char *cmd, uint8_t len, uint8_t senderid, bool toMe)
             Serial.println();
     }
 #endif
+    return processed;
 }
 
 void loop()

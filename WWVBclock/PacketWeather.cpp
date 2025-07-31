@@ -4,7 +4,7 @@
 #include "WWVBclock.h"
 #include "WwvbClockDefinitions.h"
 
-#define MONITOR_RSSI
+//#define MONITOR_RSSI
 
 namespace { 
     const uint8_t GATEWAY_NODEID = 1;
@@ -217,6 +217,7 @@ void PacketWeather::loop()
         return;
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+    #pragma GCC diagnostic ignored "-Wunused-variable"
     static auto stamp = millis();
     auto now = millis();
     #pragma GCC diagnostic pop
@@ -236,21 +237,8 @@ void PacketWeather::loop()
         memcpy(reportbuf, &radio.DATA[0], sizeof(radio.DATA));
         auto targetId = radio.TARGETID;
         unsigned senderId = radio.SENDERID;
-        DEBUG_STATEMENT(auto rssi = radio.RSSI);
-        DEBUG_STATEMENT(int16_t rssi1 = radio.readRSSI());
         bool toMe = radioConfiguration.NodeId() == targetId;
         auto ackR = radio.ACKRequested();
-
-    #if USE_SERIAL > 0
-        Serial.print('"');
-        Serial.print(reportbuf);
-        Serial.print("\" ");
-        Serial.print(" target:");
-        Serial.print(targetId);
-        Serial.print(" node:");
-        Serial.println(senderId);
-    #endif
-
         if (toMe && ackR)
         {
             stamp = millis();
@@ -262,7 +250,18 @@ void PacketWeather::loop()
 #endif
         }
 
-        routeCommand(reportbuf, sizeof(radio.DATA), static_cast<uint8_t>(senderId), toMe);
+        if (routeCommand(reportbuf, sizeof(radio.DATA), static_cast<uint8_t>(senderId), toMe))
+        {
+#if USE_SERIAL > 0
+            Serial.print('"');
+            Serial.print(reportbuf);
+            Serial.print("\" ");
+            Serial.print(" target:");
+            Serial.print(targetId);
+            Serial.print(" node:");
+            Serial.println(senderId);
+#endif
+        }
      }
 #if defined(MONITOR_RSSI)
      if (now - MonitorRSSI::prevRssiRecord >= MonitorRSSI::MONITOR_RSSI_MSEC)
