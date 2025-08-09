@@ -50,7 +50,7 @@
 
 #define DIM(x) sizeof(x)/sizeof(x[0])
 
-#define WWVBCLOCK_VERSION "1.5"
+#define WWVBCLOCK_VERSION "1.6"
 
 // Teensy 4.0 pin assignments
 namespace {  
@@ -103,6 +103,7 @@ namespace Settings {
     **     whether to observe DST
     */
     // stored in EEPROM
+    enum class DstScheduled_t : uint8_t {UNKNOWN=0xff, BEGINS = 1, ENDS = 0};
     uint32_t PacketIndoorTempIdMask;
     uint32_t PacketOutdoorTempIdMask;
     uint32_t PacketRaingaugeIdMask;
@@ -122,6 +123,9 @@ namespace Settings {
     uint8_t StartupDelaySeconds;
     const uint8_t STARTUP_DELAY_MAX_SECONDS = 50;
     uint16_t RainGaugeCorrection;
+    DstScheduled_t DstScheduled = DstScheduled_t::UNKNOWN;
+    uint8_t DstLocalHour;
+    time_t DstChangesWhen;
 
    enum class EepromAddresses {WWVBCLOCK_START = (~0x7u & (7 + RadioConfiguration::EepromAddresses::TOTAL_EEPROM_USED)),
         PACKET_INDOOR_THERMOMETER_MASK = WWVBCLOCK_START,
@@ -142,7 +146,10 @@ namespace Settings {
         TRY_RADIO_SILENCE = HCMS290x_ENABLE + sizeof(Hcms290xEnable),
         STARTUP_DELAY_SECONDS = TRY_RADIO_SILENCE + sizeof(TryRadioSilence),
         RAINGAUGE_CORRECTION = STARTUP_DELAY_SECONDS + sizeof(StartupDelaySeconds),
-        TOTAL_EEPROM_USED = RAINGAUGE_CORRECTION + sizeof(RainGaugeCorrection),
+        DSTSCHEDULED = RAINGAUGE_CORRECTION + sizeof(RainGaugeCorrection),
+        DSTLOCALHOUR = DSTSCHEDULED + sizeof(DstScheduled),
+        DSTCHANGESWHEN = DSTLOCALHOUR + sizeof(DstLocalHour),
+        TOTAL_EEPROM_USED = DSTCHANGESWHEN + sizeof(DstChangesWhen),
     };
 }
 
@@ -286,6 +293,9 @@ void restoreAllSettings()
     EEPROM.get(static_cast<uint16_t>(EepromAddresses::STARTUP_DELAY_SECONDS), StartupDelaySeconds);
     if (StartupDelaySeconds > STARTUP_DELAY_MAX_SECONDS) StartupDelaySeconds = STARTUP_DELAY_MAX_SECONDS;
     EEPROM.get(static_cast<uint16_t>(EepromAddresses::RAINGAUGE_CORRECTION), RainGaugeCorrection);
+    EEPROM.get(static_cast<uint16_t>(EepromAddresses::DSTLOCALHOUR), DstLocalHour);
+    EEPROM.get(static_cast<uint16_t>(EepromAddresses::DSTCHANGESWHEN), DstChangesWhen);
+    EEPROM.get(static_cast<uint16_t>(EepromAddresses::DSTSCHEDULED), DstScheduled);
  }
 
 void setup()
@@ -332,6 +342,14 @@ void setup()
     clockDisplay.setDisplayStyle(static_cast<ClockDisplay::TimeDisplaySyle>(TimeDisplayFont));
     clockDisplay.useFlippedFonts(UseFlippedFonts != 0); 
     clockDisplay.setRainGaugeCorrection(RainGaugeCorrection);
+    if (Settings::observeDST && DstScheduled != DstScheduled_t::UNKNOWN)
+    {
+        clockDisplay.scheduleDSTchangeAt(Settings::DstScheduled == Settings::DstScheduled_t::BEGINS,
+                Settings::DstChangesWhen, Settings::DstLocalHour);
+#if USE_SERIAL
+        Serial.println(F("DST scheduled"));
+#endif        
+    }
     packetWeather.radioPrintInfo();
     packetWeather.SetThermometerIdMasks(PacketIndoorTempIdMask, PacketOutdoorTempIdMask);
     packetWeather.SetRaingaugeIdMask(PacketRaingaugeIdMask);
@@ -875,6 +893,26 @@ void loop()
                 clockDisplay.setDST((dstInEffect!=0) && observeDST);
             }
         }
+	    time_t dayUTCstarts;
+	    bool begins;
+	    uint8_t localHour;
+	    if (es100Wire.ScheduledDst(begins, dayUTCstarts, localHour))
+	    {
+	        auto nextScheduled = (begins ? Settings::DstScheduled_t::BEGINS : Settings::DstScheduled_t::ENDS);
+	        if ((Settings::DstScheduled != nextScheduled)
+	            || (Settings::DstChangesWhen != dayUTCstarts)
+	            || (Settings::DstLocalHour != localHour))
+	            {
+	                DstScheduled = Settings::DstScheduled_t::UNKNOWN;
+	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTSCHEDULED), DstScheduled);
+	                DstLocalHour = localHour;
+	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTLOCALHOUR), DstLocalHour);
+	                DstChangesWhen = dayUTCstarts;
+	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTCHANGESWHEN), DstChangesWhen);
+	                DstScheduled = nextScheduled;
+	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTSCHEDULED), DstScheduled);
+	            }
+	    }
         dstScheduleFromWwvbToClock();
         clockSettings.es100UpdatedAt(utc);
 #if USE_SERIAL
