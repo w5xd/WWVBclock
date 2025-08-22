@@ -169,9 +169,10 @@ bool PacketWeather::ProcessCommand(const char* cmd, uint8_t len, uint8_t senderi
             DEBUG_OUTPUT1(F(" string='"));
             DEBUG_OUTPUT1(cmd);
             DEBUG_OUTPUT1('\'');
+            DEBUG_OUTPUT1('\n');      
             const char *isF = strstr(cmd, " F: ");
             const char *isRG = strstr(cmd, " RG: ");
-            const char *isC = (cmd[0] == 'C' && cmd[1] == ':') == 0 ? cmd+2 : 0;
+            const char *isC = (cmd[0] == 'C' && cmd[1] == ':')  ? cmd+2 : 0;
             if (isF != 0 && isRG != 0 && isC != 0)
             {
                 auto rg = atoi(isRG + 5);
@@ -189,7 +190,6 @@ bool PacketWeather::ProcessCommand(const char* cmd, uint8_t len, uint8_t senderi
             }
             else
                 return false;
-            DEBUG_OUTPUT1('\n');      
         }
         else
             return false;
