@@ -179,7 +179,7 @@ void ClockDisplay::displayRain(float rmm)
     }
     else
     {
-        float inch = mm / 25.4f;
+        float inch = rmm / 25.4f;
         if (inch < 10.f)
         {
             char *p = buf;
