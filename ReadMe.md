@@ -18,7 +18,7 @@ Even without the coin cell,
 as long as power is applied.
 
 It has a setting that determines how much to shift the UTC time it receives from WWVB to display local time. 
-It needs to be set to know whether your locality observes Daylight Savings Time, DST. Locations in Arizona, 
+It also needs to be set to know whether your locality observes Daylight Savings Time, DST. Locations in Arizona, 
 for example, do not.
 It monitors the WWVB announcements concerning
 whether DST is in effect now, and, many months ahead of a DST switch, announcements of the time and date of the next

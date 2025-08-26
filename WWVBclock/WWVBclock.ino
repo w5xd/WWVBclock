@@ -50,7 +50,7 @@
 
 #define DIM(x) sizeof(x)/sizeof(x[0])
 
-#define WWVBCLOCK_VERSION "1.7"
+#define WWVBCLOCK_VERSION "1.8"
 
 // Teensy 4.0 pin assignments
 namespace {  
@@ -269,6 +269,26 @@ static void printParameters()
     Serial.println(static_cast<int>(StartupDelaySeconds));
     Serial.print(F("RainGaugeCorrection="));
     Serial.println(RainGaugeCorrection);
+    if (DstChangesWhen != static_cast<time_t>(-1))
+    {
+            TimeElements t = {};
+            breakTime(DstChangesWhen, t);
+            Serial.print("DST scheduled: ");
+            Serial.print(1970 + t.Year);
+            Serial.print('/');
+            if (t.Month < 10)
+                Serial.print('0');
+            Serial.print(t.Month);
+            Serial.print('/');
+            if (t.Day < 10)
+                Serial.print('0');
+            Serial.print(t.Day);
+            Serial.print(' ');
+            if (DstLocalHour < 10)
+                Serial.print('0');
+            Serial.print(DstLocalHour);
+            Serial.println("00 local");
+    }
 #endif
 }
 
