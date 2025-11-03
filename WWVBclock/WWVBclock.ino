@@ -50,7 +50,7 @@
 
 #define DIM(x) sizeof(x)/sizeof(x[0])
 
-#define WWVBCLOCK_VERSION "1.9"
+#define WWVBCLOCK_VERSION "1.10"
 
 // Teensy 4.0 pin assignments
 namespace {  
@@ -916,7 +916,7 @@ void loop()
         auto dst = es100Wire.isDstNow();
         if (dst >= 0)
         {
-            if (dstInEffect != dst)
+            if (dstInEffect != static_cast<uint8_t>(dst))
             {
                 dstInEffect = static_cast<uint8_t>(dst);
                 EEPROM.put(static_cast<uint16_t>(EepromAddresses::DST_IN_EFFECT), dstInEffect);

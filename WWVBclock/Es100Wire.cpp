@@ -46,9 +46,10 @@ Es100Wire::Es100Wire(int irqPin, int enablePin, TwoWire &wire)
     ,m_state(ReceptionState::SHUTDOWN)
     ,m_time(0)
     ,m_status0(0)
-    ,m_yearOfDst(0)
-    ,m_monthOfDst(0)
-    ,m_dayOfDst(0)
+    ,m_yearLstRec(0)
+    ,m_monthLstRec(0)
+    ,m_dayLstRec(0)
+    ,m_hourLstRec(0)
     ,m_nextDstMonthStatus(-1)
     ,m_nextDstDayStatus(-1)
     ,m_nextDstHourStatus(-1)
@@ -113,24 +114,25 @@ bool Es100Wire::loop(bool isSynced)
             if (yr < 0)
                 return false;
             toRead.Year = (2000 - 1970) + fromBCD(yr);
-            m_yearOfDst = toRead.Year;
+            m_yearLstRec = toRead.Year;
 
             auto mo = readRegister(ES100_MONTH_REG);
             if (mo < 0)
                 return false;
             toRead.Month = fromBCD(mo);
-            m_monthOfDst = toRead.Month;
+            m_monthLstRec = toRead.Month;
 
             auto dy = readRegister(ES100_DAY_REG);
             if (dy < 0)
                 return false;
             toRead.Day = fromBCD(dy);
-            m_dayOfDst = toRead.Day;
+            m_dayLstRec = toRead.Day;
 
             auto hr = readRegister(ES100_HOUR_REG);
             if (hr < 0)
                 return false;
             toRead.Hour = fromBCD(hr);
+            m_hourLstRec = toRead.Hour;
 
             auto mn = readRegister(ES100_MINUTE_REG);
             if (mn < 0)
@@ -258,7 +260,7 @@ bool Es100Wire::ScheduledDst(bool &begins, time_t &when, uint8_t &localHour, boo
     TimeElements t = {};
     if ((m_status0 >= 0) && (m_nextDstHourStatus >= 0) && 0 == ((m_nextDstHourStatus & DST_HOUR_SPECIAL3)))
     {
-        t.Year = m_yearOfDst;
+        t.Year = m_yearLstRec;
         localHour =  m_nextDstHourStatus & 0xF;
         // there are two possible ways to report a scheduled DST change
          if (((m_status0 & STATUS_0_RXOK) != 0) && 
@@ -266,8 +268,10 @@ bool Es100Wire::ScheduledDst(bool &begins, time_t &when, uint8_t &localHour, boo
                 (0 != (STATUS_0_DST0 & (m_status0 ^ (m_status0 >> 1)))))
         {   // schedule DST on the day it changes
             begins = (m_status0 & STATUS_0_DST1) != 0;
-            t.Month = m_monthOfDst;
-            t.Day = m_dayOfDst;
+            t.Month = m_monthLstRec;
+            t.Day = m_dayLstRec;
+            if (m_hourLstRec >= 11)  // late in the day today?
+                localHour = 2;  // then change happened in the past. 
             if (print)
             {
 #if USE_SERIAL
@@ -292,7 +296,7 @@ bool Es100Wire::ScheduledDst(bool &begins, time_t &when, uint8_t &localHour, boo
             begins = (m_status0 & STATUS_0_DST0) == 0;
             t.Month = fromBCD(m_nextDstMonthStatus);
             t.Day = fromBCD(m_nextDstDayStatus);
-            if (t.Month < m_monthOfDst)
+            if (t.Month < m_monthLstRec)
                 t.Year += 1;
             if (print)
             {

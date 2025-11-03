@@ -29,9 +29,10 @@ class Es100Wire
    ReceptionState m_state;
    time_t m_time;
    int16_t m_status0;
-   uint8_t m_yearOfDst;
-   uint8_t m_monthOfDst;
-   uint8_t m_dayOfDst;
+   uint8_t m_yearLstRec;
+   uint8_t m_monthLstRec;
+   uint8_t m_dayLstRec;
+   uint8_t m_hourLstRec;
    int16_t m_nextDstMonthStatus;
    int16_t m_nextDstDayStatus;
    int16_t m_nextDstHourStatus;
