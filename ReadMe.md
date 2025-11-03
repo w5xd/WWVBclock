@@ -47,22 +47,19 @@ The PCB has a CR2032 coin cell holder for a cell that backs up the clock while p
 has a calculated lifetime of many years.
 
 <h2>Operation</h2>
-Plug in the 5VDC and within a few hours the clock should set itself to WWVB. 
-If the power source is above about 5.5 Volts, the clock will not come on at all.
-Use the right button ("Hold for menu") to change settings like time zone,
+<p>Plug in the 5VDC and within a few hours the clock should set itself to WWVB. 
+If the power source is above about 5.5 Volts, the clock will not come on at all.</p>
+<p>Use the right button ("Hold for menu") to change settings like time zone,
 whether your location observes Daylight Savings time, and the brightness of the
 the LED projection. You may use the left button ("Hold to set Time") to adjust the time,
-but the clock will override any such changes the next time it receives a WWVB signal.
-
-The base can be rotated as much as about 90 degrees which allows
+but the clock will override any such changes the next time it receives a WWVB signal.</p>
+<p>The base can be rotated as much as about 90 degrees which allows
  some flexibility orienting its 60KHz antenna. One of the two arrows 
 on the base under the "WWVB" letters
-should point as close as possible to the direction of Ft. Collins, Colorado. The antenna orientation
-to avoid is a 90 degree offset of the arrows from Ft. Collins. 
-
-The projection system, which points not quite straight up, focuses adequately on a ceiling from about 4 feet out 
-to about 8 feet away. The LED projection is only bright enough to be visible in a darkened room
-
+should point as closely as possible to the direction of Ft. Collins, Colorado. The antenna orientation
+to avoid is a 90 degree offset of the arrows from Ft. Collins. </p>
+<p>The projection system, which points not quite straight up, focuses adequately on a ceiling from about 4 feet out 
+to about 8 feet away. The LED projection is only bright enough to be visible in a darkened room</p>
 <h2>Parts</h2>
 The parts available from Mouser are in <a href='PartsList.pdf'>PartsList.pdf</a> and 
 <a href='PartsList.xls'>PartsList.xls</a>.
@@ -96,7 +93,7 @@ antenna header. Also, the ES100
 WWVB receiver,  and, lastly, the CR2032 coin cell holder are soldered onto the bottom of the board.
 
 The current firmware only supports a single 12-pin HCMS2905 LED placed in the LED1 position. The enclosure dimensions focus
-properly for the LED being mounted without a socket. The PCB and firmware offer the builder three choices for how
+properly for the LED mounted directly to the PCB, i.e., without a socket. The PCB and firmware offer the builder three choices for how
 to populate LED1 and LED2. The firmware only supports the first two choices, however:
 <ol>
 <li>A single HCMS2905 at LED1.
@@ -112,7 +109,7 @@ pulls the Sel pin on LED2 to ground.) Cut that trace.
 The projection system from the LED2 position puts the image on the ceiling an additional character height away from the clock
 face than LED1.
 <li>Two HCMS2905 devices may be placed, one at LED1 and the other at LED2. To repeat, there is no support
-in the sketch that puts anything on LED2. That is left as an exercise for the builder.
+in the sketch that has an LED2. That is left as an exercise for the builder.
 </ol>
 
 The ES100 module has a triplet of solder bumps that optionally provide the required i2c pull ups. They come from the factory not bridged. 
@@ -147,7 +144,8 @@ installing
 some of the parts blocks access to others. For example, the PCB must be installed into the 3D printed enclosure with its Teensy 
 removed
 so that the mounting screws through the PCB can be installed. The LCD must go in after the Teensy, else it blocks the Teensy from 
-being installed. The interface and retainer rings on the bottom have to go together <i>first</i> else you'll get the PCB and LCD all installed and
+being installed. The interface and retainer rings on the bottom have to go together <i>first</i> else you'll get the PCB and LCD 
+all installed and
 then get to take them all back apart in order to install the base.
 <ol>
 <li>The SW1 and SW2 assembly is done with quantity 4 by 2.75" long wires to the two switches. One wire from each
@@ -239,7 +237,7 @@ Not knowing how to design a projection system, and not having any experience wit
 started when I asked grok.com to design an LED projection system for a certain sized LED (I think .3 inch) to
 a certain sized letter (I think maybe 1") on a ceiling a certain distance away. Grok immediately came back and
 told me a 100mm focal length lens would do what I asked. The geometry of that optical design was not 
-suitable (it required a device about twice as tall as I thought I wanted) but it set me out to understand how
+suitable (it required a device about twice as tall as this one) but it set me out to understand how
 to design a one-lens projection system. That search led me to this FreeCAD 
 <a href='https://github.com/chbergmann/OpticsWorkbench'>Optics Workbench</a>. Some experimenting with that
 workbench led me to the package implemented in the 3D printing here: a 38mm diameter, 50mm focal length lens
@@ -253,15 +251,16 @@ about 10 inches further from the wall than the point directly above the clock.  
 is placed close to a wall and with its LCD facing the room, the projected image is on the ceiling, but offset 10 more inches away from the 
 wall. Both the optical
 model and the PCB have a pair of 4 character LED chips to create a 4 by 2 character over/under image. But the second LED
-is optional and the Arduino sketch as published here won't illuminate anything on the second chip. (The optical image
-of the LED2 position is about 4 inches further from the wall than that of LED1.)
+is optional and the Arduino sketch as published here won't illuminate anything on the second chip. (Should the building
+want to support LED2, you should note the optical image
+of the LED2 position is about 4 inches further from the wall, i.e. it is appears next to that of LED1.)
 
 The next issue I ran into was the fact that there is apparently no such thing as a manufactured 7 segment LED
 display that has straight up and down as opposed to slanted digits. 
-But the direction of the slant is reversed by a simple single lens projector. The reason for the slant is "readability" but
+But the direction of the slant is reversed by this simple single lens projector. The reason for the slant is "readability" but
 reversing it decreases readability. I did not want to project a backward slanted digital time display on the ceiling.
 I was able to find the Broadcom 5x7 pixel character display (see the PartsList.xls), which
-works around the slant problem, but requires significantly more complex firmware to support one or more fonts that fit
+resolves the slant problem, but requires significantly more complex firmware to support one or more fonts that fit
 in those 35 pixels. The Broadcom device is also at least 5 times more expensive than a similar sized 7 segment LED. I suppose
 that it also has about 5 times as many individually controllable LEDs, for what that is worth. The firmware lets you
 select among several fonts. Broadcom published one, which is labeled here as "OEM" and the 5x7Rasters project in this repo has a couple
@@ -274,6 +273,8 @@ its measured temperature on a timer.
 <li><a href='https://github.com/w5xd/PacketRainGauge'>https://github.com/w5xd/PacketRainGauge</a> is a rain gauge that telemeters
 every mm of rainfall it measures.
 </ul>
+<p>For what its worth: this repo also contains a 3D model for an enclosure that accepts this same PCB assembled without the WWVB
+and optical system. In that configuration, it becomes a high performance 900MHz packet gateway.</p>
 
 
 
