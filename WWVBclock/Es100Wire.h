@@ -10,9 +10,9 @@ class Es100Wire
     bool loop(bool isSynced); // returns true when it has a receipt. 
     time_t getUTCandClear();
     int8_t isDstNow(); // WWVB reports every minute whether DST is now in effect
-    bool ScheduledDst(bool &onOff, time_t &when, uint8_t &localHour); // returns UTC midnight of date of next change
+    bool ScheduledDst(bool &onOff, time_t &when, uint8_t &localHour, bool print=false); // returns UTC midnight of date of next change
     static void printClock();
-    
+      
  protected:
    void shutdown();
    void listen();
@@ -30,6 +30,8 @@ class Es100Wire
    time_t m_time;
    int16_t m_status0;
    uint8_t m_yearOfDst;
+   uint8_t m_monthOfDst;
+   uint8_t m_dayOfDst;
    int16_t m_nextDstMonthStatus;
    int16_t m_nextDstDayStatus;
    int16_t m_nextDstHourStatus;

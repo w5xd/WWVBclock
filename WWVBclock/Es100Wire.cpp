@@ -34,7 +34,10 @@ static const uint8_t STATUS_0_DST1 = 1 << 6;
 static const uint8_t IRQSTATUS_RX_COMPLETE = 1;
 
 static const uint8_t DST_HOUR_SPECIAL3 = 1 << 7;
-
+static const uint8_t DST_HOUR_SPECIAL2 = 1 << 6;
+static const uint8_t DST_HOUR_SPECIAL1 = 1 << 5;
+static const uint8_t DST_HOUR_SPECIAL0 = 1 << 4;
+static const uint8_t DST_HOUR_SPECIAL = DST_HOUR_SPECIAL3 | DST_HOUR_SPECIAL2 | DST_HOUR_SPECIAL1 | DST_HOUR_SPECIAL0;
 
 Es100Wire::Es100Wire(int irqPin, int enablePin, TwoWire &wire) 
     :irqPin(irqPin)
@@ -44,6 +47,8 @@ Es100Wire::Es100Wire(int irqPin, int enablePin, TwoWire &wire)
     ,m_time(0)
     ,m_status0(0)
     ,m_yearOfDst(0)
+    ,m_monthOfDst(0)
+    ,m_dayOfDst(0)
     ,m_nextDstMonthStatus(-1)
     ,m_nextDstDayStatus(-1)
     ,m_nextDstHourStatus(-1)
@@ -114,11 +119,13 @@ bool Es100Wire::loop(bool isSynced)
             if (mo < 0)
                 return false;
             toRead.Month = fromBCD(mo);
+            m_monthOfDst = toRead.Month;
 
             auto dy = readRegister(ES100_DAY_REG);
             if (dy < 0)
                 return false;
             toRead.Day = fromBCD(dy);
+            m_dayOfDst = toRead.Day;
 
             auto hr = readRegister(ES100_HOUR_REG);
             if (hr < 0)
@@ -230,58 +237,88 @@ int8_t Es100Wire::isDstNow()
     if (m_status0 < 0)
         return -1; // use valid m_nextDstDayStatus as proxy for whether m_status0 is OK;
     uint8_t stat = (m_status0 & (STATUS_0_DST0 | STATUS_0_DST1 | STATUS_0_RXOK)) ;
-    DEBUG_OUTPUT1(F("Dst now is 0x"));
-    DEBUG_OUTPUT2(static_cast<unsigned>(stat), HEX);
-    DEBUG_OUTPUT1('\n');
     if (stat == STATUS_0_RXOK)
         return 0;
     if (stat == (STATUS_0_DST0 | STATUS_0_DST1 | STATUS_0_RXOK))
         return 1;
+    if ((m_nextDstHourStatus >= 0) && (m_nextDstHourStatus & DST_HOUR_SPECIAL3)!=0)
+    {
+        auto masked = m_nextDstHourStatus & DST_HOUR_SPECIAL;
+        if (masked == (DST_HOUR_SPECIAL0|DST_HOUR_SPECIAL3))
+            return 0;
+         if (masked == (DST_HOUR_SPECIAL1|DST_HOUR_SPECIAL3))
+            return 1;
+    }
+       
     return -1; // don't really know 
 }
 
-bool Es100Wire::ScheduledDst(bool &begins, time_t &when, uint8_t &localHour) // returns UTC midnight of date of change
+bool Es100Wire::ScheduledDst(bool &begins, time_t &when, uint8_t &localHour, bool print) // returns UTC midnight of date of change
 {
     TimeElements t = {};
-    if (m_status0 >= 0)
+    if ((m_status0 >= 0) && (m_nextDstHourStatus >= 0) && 0 == ((m_nextDstHourStatus & DST_HOUR_SPECIAL3)))
     {
-        begins = (m_status0 & STATUS_0_DST1) == 0;
+        t.Year = m_yearOfDst;
+        localHour =  m_nextDstHourStatus & 0xF;
         // there are two possible ways to report a scheduled DST change
-        if (((m_status0 & STATUS_0_RXOK) != 0) && (0 != (STATUS_0_DST0 & (m_status0 ^ (m_status0 >> 1)))))
+         if (((m_status0 & STATUS_0_RXOK) != 0) && 
+                // STATUS_0_DST0 does not match STATUS_0_DST1
+                (0 != (STATUS_0_DST0 & (m_status0 ^ (m_status0 >> 1)))))
         {   // schedule DST on the day it changes
-            breakTime(now(), t);
-            t.Hour = 0;
-            t.Minute = 0;
-            t.Second = 0;
-            localHour = 
-             ((m_nextDstHourStatus >= 0) && 0 == ((m_nextDstHourStatus & DST_HOUR_SPECIAL3))) ?
-                m_nextDstHourStatus & 0xF
-                : 2;
-            DEBUG_OUTPUT1(F("DST from status0\n"));
+            begins = (m_status0 & STATUS_0_DST1) != 0;
+            t.Month = m_monthOfDst;
+            t.Day = m_dayOfDst;
+            if (print)
+            {
+#if USE_SERIAL
+                Serial.print(F("Es100 DST "));
+                Serial.print(begins ? "beginning" : "ending");
+                Serial.print(" year: ");
+                Serial.print(static_cast<int>(1970+t.Year));
+                Serial.print('-');
+                Serial.print(static_cast<int>(t.Month));
+                Serial.print('-');
+                Serial.print(static_cast<int>(t.Day));
+                Serial.print(F(", today at "));
+                if (localHour < 10)
+                    Serial.print('0');
+                Serial.print(static_cast<int>(localHour));
+                Serial.println("00");
+ #endif
+            }
         }
-        else if ((m_nextDstHourStatus >= 0) && (m_nextDstDayStatus >= 0) && (m_nextDstMonthStatus >= 0) && 
-            0 == (m_nextDstHourStatus & DST_HOUR_SPECIAL3))
+        else if ((m_nextDstHourStatus >= 0) && (m_nextDstDayStatus >= 0) && (m_nextDstMonthStatus >= 0))
         {   // WWVB has broadcast the scheduled change way in advance
-            t.Year = m_yearOfDst;
+            begins = (m_status0 & STATUS_0_DST0) == 0;
             t.Month = fromBCD(m_nextDstMonthStatus);
             t.Day = fromBCD(m_nextDstDayStatus);
-            localHour = m_nextDstHourStatus & 0xF;
-            DEBUG_OUTPUT1(F("DST from DST HOUR\n"));
-        }
+            if (t.Month < m_monthOfDst)
+                t.Year += 1;
+            if (print)
+            {
+ #if USE_SERIAL
+                Serial.print(F("Es100 DST scheduled "));
+                Serial.print(begins ? "beginning" : "ending");
+                Serial.print(F(" at Y-M-D hr: "));
+                Serial.print(static_cast<int>(1970+t.Year));
+                Serial.print('-');
+                Serial.print(static_cast<int>(t.Month));
+                Serial.print('-');
+                Serial.print(static_cast<int>(t.Day));
+                Serial.print(' ');
+                if (localHour < 10)
+                    Serial.print('0');
+                Serial.print(static_cast<int>(localHour));
+                Serial.println("00");
+ #endif
+            }
+       }
         else 
             return false;
     }
     else 
         return false;
 
-    DEBUG_OUTPUT1(F("Scheduled DST."));
-    debugPrint(t);
-    DEBUG_OUTPUT1(F(" hour:"));
-    DEBUG_OUTPUT1(static_cast<uint16_t>(localHour));
-    if (begins)
-        DEBUG_OUTPUT1(F(" beginning\n"));
-    else
-        DEBUG_OUTPUT1(F(" ending\n"));
     when = makeTime(t);
     return true;
 }

@@ -228,6 +228,10 @@ void ClockDisplay::loop(bool ledEnabled, bool lcdEnabled)
         if (t >= m_DstChangesWhen)
         {
             DST = m_DstScheduledBegin;
+            #ifdef USE_SERIAL
+            Serial.print(F("Changing DST SETTING to "));
+            Serial.println(DST ? F("on"):F("off"));
+            #endif
             m_DstChangesWhen = 0;
         }
     }

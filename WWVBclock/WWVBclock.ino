@@ -50,7 +50,7 @@
 
 #define DIM(x) sizeof(x)/sizeof(x[0])
 
-#define WWVBCLOCK_VERSION "1.8"
+#define WWVBCLOCK_VERSION "1.9"
 
 // Teensy 4.0 pin assignments
 namespace {  
@@ -287,8 +287,21 @@ static void printParameters()
             if (DstLocalHour < 10)
                 Serial.print('0');
             Serial.print(DstLocalHour);
-            Serial.println("00 local");
-    }
+            Serial.print("00 local: ");
+            switch (Settings::DstScheduled)
+            {
+                case Settings::DstScheduled_t::BEGINS:
+                    Serial.print(F("BEGINS"));
+                    break;
+                case Settings::DstScheduled_t::ENDS:
+                    Serial.print(F("ENDS"));
+                    break;
+                default: 
+                    Serial.print(F("UNKNOWN"));
+                    break;
+            }
+            Serial.println();
+   }
 #endif
 }
 
@@ -367,7 +380,7 @@ void setup()
         clockDisplay.scheduleDSTchangeAt(Settings::DstScheduled == Settings::DstScheduled_t::BEGINS,
                 Settings::DstChangesWhen, Settings::DstLocalHour);
 #if USE_SERIAL
-        Serial.println(F("DST scheduled"));
+        Serial.println(F("DST scheduled "));
 #endif        
     }
     packetWeather.radioPrintInfo();
@@ -396,11 +409,8 @@ static void dstScheduleFromWwvbToClock()
 {   // when WWVB schedule for DST is received, give it to the clock
     if (observeDST)
     {
-        time_t dayUTCstarts;
-        bool begins;
-        uint8_t localHour;
-        if (es100Wire.ScheduledDst(begins, dayUTCstarts, localHour))
-            clockDisplay.scheduleDSTchangeAt(begins, dayUTCstarts, localHour);
+        clockDisplay.scheduleDSTchangeAt(Settings::DstScheduled == DstScheduled_t::BEGINS, 
+            Settings::DstChangesWhen, Settings::DstLocalHour);
     }
 }
 
@@ -916,25 +926,25 @@ void loop()
 	    time_t dayUTCstarts;
 	    bool begins;
 	    uint8_t localHour;
-	    if (es100Wire.ScheduledDst(begins, dayUTCstarts, localHour))
+	    if (es100Wire.ScheduledDst(begins, dayUTCstarts, localHour, true))
 	    {
-	        auto nextScheduled = (begins ? Settings::DstScheduled_t::BEGINS : Settings::DstScheduled_t::ENDS);
+ 	        auto nextScheduled = (begins ? Settings::DstScheduled_t::BEGINS : Settings::DstScheduled_t::ENDS);
 	        if ((Settings::DstScheduled != nextScheduled)
 	            || (Settings::DstChangesWhen != dayUTCstarts)
 	            || (Settings::DstLocalHour != localHour))
 	            {
 	                DstScheduled = Settings::DstScheduled_t::UNKNOWN;
 	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTSCHEDULED), DstScheduled);
-	                DstLocalHour = localHour;
-	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTLOCALHOUR), DstLocalHour);
+                    DstLocalHour = localHour;
+ 	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTLOCALHOUR), DstLocalHour);
 	                DstChangesWhen = dayUTCstarts;
 	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTCHANGESWHEN), DstChangesWhen);
 	                DstScheduled = nextScheduled;
 	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTSCHEDULED), DstScheduled);
 	            }
+            dstScheduleFromWwvbToClock();
 	    }
-        dstScheduleFromWwvbToClock();
-        clockSettings.es100UpdatedAt(utc);
+         clockSettings.es100UpdatedAt(utc);
 #if USE_SERIAL
         Serial.println(F("Successful reception of WWVB BPSK signal"));
 #endif
