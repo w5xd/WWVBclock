@@ -68,6 +68,8 @@ void ClockDisplay::scheduleDSTchangeAt(bool begins, time_t utcMidnight, uint8_t 
 {
     m_DstScheduledBegin = begins;
     auto t = utcMidnight + utcSecondsOffset + 3600 * localHour;
+    if (DST)
+        t -= 3600;
     m_DstChangesWhen = t;
 }
 
