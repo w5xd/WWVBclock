@@ -258,14 +258,16 @@ int8_t Es100Wire::isDstNow()
 bool Es100Wire::ScheduledDst(bool &begins, time_t &when, uint8_t &localHour, bool print) // returns UTC midnight of date of change
 {
     TimeElements t = {};
-    if ((m_status0 >= 0) && (m_nextDstHourStatus >= 0) && 0 == ((m_nextDstHourStatus & DST_HOUR_SPECIAL3)))
+    if ((m_status0 >= 0) && 
+            ((m_status0 & STATUS_0_RXOK) != 0) && 
+            (m_nextDstHourStatus >= 0) && 
+            0 == (m_nextDstHourStatus & DST_HOUR_SPECIAL3))
     {
         t.Year = m_yearLstRec;
         localHour =  m_nextDstHourStatus & 0xF;
         // there are two possible ways to report a scheduled DST change
-         if (((m_status0 & STATUS_0_RXOK) != 0) && 
-                // STATUS_0_DST0 does not match STATUS_0_DST1
-                (0 != (STATUS_0_DST0 & (m_status0 ^ (m_status0 >> 1)))))
+        if (  // STATUS_0_DST0 does not match STATUS_0_DST1
+                0 != (STATUS_0_DST0 & (m_status0 ^ (m_status0 >> 1))))
         {   // schedule DST on the day it changes
             begins = (m_status0 & STATUS_0_DST1) != 0;
             t.Month = m_monthLstRec;
@@ -291,7 +293,7 @@ bool Es100Wire::ScheduledDst(bool &begins, time_t &when, uint8_t &localHour, boo
  #endif
             }
         }
-        else if ((m_nextDstHourStatus >= 0) && (m_nextDstDayStatus >= 0) && (m_nextDstMonthStatus >= 0))
+        else if ((m_nextDstDayStatus >= 0) && (m_nextDstMonthStatus >= 0))
         {   // WWVB has broadcast the scheduled change way in advance
             begins = (m_status0 & STATUS_0_DST0) == 0;
             t.Month = fromBCD(m_nextDstMonthStatus);
@@ -316,7 +318,7 @@ bool Es100Wire::ScheduledDst(bool &begins, time_t &when, uint8_t &localHour, boo
                 Serial.println("00");
  #endif
             }
-       }
+        }
         else 
             return false;
     }
