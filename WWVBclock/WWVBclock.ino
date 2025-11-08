@@ -50,7 +50,7 @@
 
 #define DIM(x) sizeof(x)/sizeof(x[0])
 
-#define WWVBCLOCK_VERSION "1.12"
+#define WWVBCLOCK_VERSION "1.13"
 
 // Teensy 4.0 pin assignments
 namespace {  
@@ -400,6 +400,9 @@ void setup()
     clockDisplay.set12Hour(TwelveHourDisplay != 0);
     packetWeather.setNotify(&clockDisplay);
     wwvbSearchStartedMsec = millis();
+    // arrange to turn on es100 in 10 seconds
+    wwvbSyncTimeMsec = millis() + 10000 - T1_Hour_msec;
+    wwvbSynced = true;
 #if USE_SERIAL
     Serial.println(F("setup() complete"));
 #endif
