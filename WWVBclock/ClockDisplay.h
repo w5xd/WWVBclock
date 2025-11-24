@@ -23,10 +23,11 @@ class ClockDisplay : public ClockNotification
         void setDisplayStyle(TimeDisplaySyle);
         void setUtcMinutesOffset(int minutes);
         void setDST(bool);
+        void observeDST(bool);
         void set12Hour(bool);
         void unitsInMetric(bool);
         bool setRainGaugeCorrection(uint16_t perThousand);
-        void scheduleDSTchangeAt(bool begins, time_t utcMidnight, uint8_t localHour);
+        bool scheduleDSTchangeAt(bool begins, time_t utcMidnight, uint8_t localHour);
         void useFlippedFonts(bool);
         void updateDisplay();
 
@@ -46,6 +47,7 @@ class ClockDisplay : public ClockNotification
         bool radioSilence;
         int utcSecondsOffset;
         bool DST;
+        bool m_observeDST;
         bool m_DstScheduledBegin;
         time_t m_DstChangesWhen;
         bool m_unitsInMetric;

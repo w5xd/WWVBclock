@@ -17,6 +17,7 @@ ClockDisplay::ClockDisplay(LiquidCrystal &lcd, Hcms290xType_t &led)
     , radioSilence(false)
     , utcSecondsOffset(0)
     , DST(false)
+    , m_observeDST(false)
     , m_DstScheduledBegin(false)
     , m_DstChangesWhen(0)
     , m_unitsInMetric(false)
@@ -64,13 +65,14 @@ void ClockDisplay::updateDisplay()
     lastTimet = 0;
 }
 
-void ClockDisplay::scheduleDSTchangeAt(bool begins, time_t utcMidnight, uint8_t localHour)
-{
+bool ClockDisplay::scheduleDSTchangeAt(bool begins, time_t utcMidnight, uint8_t localHour)
+{ // returns true if in past
     m_DstScheduledBegin = begins;
     auto t = utcMidnight + utcSecondsOffset + 3600 * localHour;
-    if (DST)
+    if (!begins)
         t -= 3600;
     m_DstChangesWhen = t;
+    return (now()>t);
 }
 
 void ClockDisplay::setUtcMinutesOffset(int minutes)
@@ -97,6 +99,12 @@ void ClockDisplay::setDST(bool v) {
     DST = v; 
     updateDisplay();
 };
+
+void ClockDisplay::observeDST(bool v)
+{
+  m_observeDST = v;
+  updateDisplay();
+}
 
 void ClockDisplay::set12Hour(bool v) { 
     m_12Hour = v;
@@ -238,7 +246,7 @@ void ClockDisplay::loop(bool ledEnabled, bool lcdEnabled)
         }
     }
     t += utcSecondsOffset;
-    if (DST)
+    if (DST && m_observeDST)
         t += 3600;
     auto sec = second(t);
     auto min = minute(t);

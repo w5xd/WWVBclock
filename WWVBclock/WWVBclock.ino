@@ -34,7 +34,6 @@
 ** and displays their results on either its LCD or LED or both.
 */
 
-
 #include <SPI.h>
 #include <Wire.h>
 #include <EEPROM.h>
@@ -50,7 +49,7 @@
 
 #define DIM(x) sizeof(x)/sizeof(x[0])
 
-#define WWVBCLOCK_VERSION "1.13"
+#define WWVBCLOCK_VERSION "1.14"
 
 // Teensy 4.0 pin assignments
 namespace {  
@@ -331,6 +330,27 @@ void restoreAllSettings()
     EEPROM.get(static_cast<uint16_t>(EepromAddresses::DSTSCHEDULED), DstScheduled);
  }
 
+ 
+static void dstScheduleFromWwvbToClock()
+{   // when WWVB schedule for DST is received, give it to the clock
+    if (clockDisplay.scheduleDSTchangeAt(Settings::DstScheduled == DstScheduled_t::BEGINS, 
+        Settings::DstChangesWhen, Settings::DstLocalHour))
+        {
+            if (Settings::DstChangesWhen != 0)
+            {
+              #if USE_SERIAL
+              Serial.println("DST scheduled in past. Clearing it");
+              #endif
+              Settings::dstInEffect = Settings::DstScheduled == DstScheduled_t::BEGINS ? 1 : 0;
+            }
+            Settings::DstChangesWhen = 0;
+            Settings::DstScheduled = DstScheduled_t::UNKNOWN;
+            EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTSCHEDULED), Settings::DstScheduled);
+            EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTCHANGESWHEN), Settings::DstChangesWhen);
+            EEPROM.put(static_cast<uint16_t>(EepromAddresses::DST_IN_EFFECT), dstInEffect);
+         }
+}
+
 void setup()
 {
     if (StartupDelaySeconds > 0)
@@ -375,14 +395,6 @@ void setup()
     clockDisplay.setDisplayStyle(static_cast<ClockDisplay::TimeDisplaySyle>(TimeDisplayFont));
     clockDisplay.useFlippedFonts(UseFlippedFonts != 0); 
     clockDisplay.setRainGaugeCorrection(RainGaugeCorrection);
-    if (Settings::observeDST && DstScheduled != DstScheduled_t::UNKNOWN)
-    {
-        clockDisplay.scheduleDSTchangeAt(Settings::DstScheduled == Settings::DstScheduled_t::BEGINS,
-                Settings::DstChangesWhen, Settings::DstLocalHour);
-#if USE_SERIAL
-        Serial.println(F("DST scheduled "));
-#endif        
-    }
     packetWeather.radioPrintInfo();
     packetWeather.SetThermometerIdMasks(PacketIndoorTempIdMask, PacketOutdoorTempIdMask);
     packetWeather.SetRaingaugeIdMask(PacketRaingaugeIdMask);
@@ -395,7 +407,15 @@ void setup()
     DEBUG_OUTPUT1(F("Teensy time now:"));
     DEBUG_OUTPUT1(teensyNow);
     DEBUG_OUTPUT1('\n');
-    clockDisplay.setDST(dstInEffect && observeDST);
+    clockDisplay.observeDST(Settings::observeDST);
+    if (DstScheduled != DstScheduled_t::UNKNOWN)
+    {
+        dstScheduleFromWwvbToClock();
+ #if USE_SERIAL
+        Serial.println(F("DST scheduled "));
+#endif        
+    }
+    clockDisplay.setDST(Settings::dstInEffect);
     clockDisplay.unitsInMetric(unitsInMetric != 0);
     clockDisplay.set12Hour(TwelveHourDisplay != 0);
     packetWeather.setNotify(&clockDisplay);
@@ -406,15 +426,6 @@ void setup()
 #if USE_SERIAL
     Serial.println(F("setup() complete"));
 #endif
-}
-
-static void dstScheduleFromWwvbToClock()
-{   // when WWVB schedule for DST is received, give it to the clock
-    if (observeDST)
-    {
-        clockDisplay.scheduleDSTchangeAt(Settings::DstScheduled == DstScheduled_t::BEGINS, 
-            Settings::DstChangesWhen, Settings::DstLocalHour);
-    }
 }
 
 static bool compareCommand(const char *p, const char *&incoming)
@@ -521,7 +532,8 @@ static bool ProcessCommand(const char *cmd, uint8_t len)
     {
         observeDST = static_cast<uint8_t>(aDecimalToInt(cmd));
         EEPROM.put(static_cast<uint16_t>(EepromAddresses::OBSERVE_DST), observeDST);
-        clockDisplay.setDST(dstInEffect && observeDST);
+        clockDisplay.observeDST(observeDST);
+        clockDisplay.setDST(dstInEffect);
         dstScheduleFromWwvbToClock();
         return true;
     }
@@ -552,7 +564,7 @@ static bool ProcessCommand(const char *cmd, uint8_t len)
         {
             dstInEffect = static_cast<uint8_t>(aDecimalToInt(cmd));
             EEPROM.put(static_cast<uint16_t>(EepromAddresses::DST_IN_EFFECT), dstInEffect);
-            clockDisplay.setDST(dstInEffect && observeDST);
+            clockDisplay.setDST(dstInEffect);
         }
         return true;
     }  
@@ -916,14 +928,14 @@ void loop()
         wwvbSynced = true;
         wwvbSyncTimeMsec = millis();
         endRadioSilence();
-        auto dst = es100Wire.isDstNow();
+        auto dst = es100Wire.isDstNow() ? 1 : 0;
         if (dst >= 0)
         {
             if (dstInEffect != static_cast<uint8_t>(dst))
             {
                 dstInEffect = static_cast<uint8_t>(dst);
                 EEPROM.put(static_cast<uint16_t>(EepromAddresses::DST_IN_EFFECT), dstInEffect);
-                clockDisplay.setDST((dstInEffect!=0) && observeDST);
+                clockDisplay.setDST(dstInEffect!=0);
             }
         }
 	    time_t dayUTCstarts;
@@ -938,7 +950,7 @@ void loop()
 	            {
 	                DstScheduled = Settings::DstScheduled_t::UNKNOWN;
 	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTSCHEDULED), DstScheduled);
-                    DstLocalHour = localHour;
+                  DstLocalHour = localHour;
  	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTLOCALHOUR), DstLocalHour);
 	                DstChangesWhen = dayUTCstarts;
 	                EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTCHANGESWHEN), DstChangesWhen);
