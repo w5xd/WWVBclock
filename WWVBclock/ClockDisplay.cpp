@@ -170,7 +170,7 @@ void ClockDisplay::displayRain(float rmm)
     char buf[8];
     memset(buf,0,sizeof(buf));
     float corrected = rmm * m_rainGaugeCorrectionPerThousand / 1000.f;
-    uint16_t mm = static_cast<unsigned>(corrected);
+    uint16_t mm = static_cast<unsigned>(corrected + 0.5);
     lcd.setCursor(4,1);
     if (m_unitsInMetric)
     {
@@ -189,7 +189,7 @@ void ClockDisplay::displayRain(float rmm)
     }
     else
     {
-        float inch = rmm / 25.4f;
+        float inch = mm / 25.4f;
         if (inch < 10.f)
         {
             char *p = buf;
