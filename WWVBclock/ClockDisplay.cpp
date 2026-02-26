@@ -176,7 +176,7 @@ void ClockDisplay::displayRain(float rmm)
     {
         if (mm < 999)
         {
-            dtostrf(mm, 3, 0, buf);
+            dtostrf(mm, 1, 0, buf);
             auto len = strlen(buf);
             buf[len++] = 'm';
             buf[len] = 0;
@@ -189,12 +189,12 @@ void ClockDisplay::displayRain(float rmm)
     }
     else
     {
-        float inch = mm / 25.4f;
-        if (inch < 10.f)
+        float inch = corrected / 25.4f;
+        if (inch < 100.f)
         {
             char *p = buf;
-            dtostrf(inch, 4, inch < 1.0f ? 2 : 1, buf);
-            if (*p == '0');
+            dtostrf(inch, 1, inch < 1.0f ? 2 : (inch < 10.0f ? 1 : 0), buf);
+            while (*p == '0');
                 p += 1;
             auto len = strlen(p);
             if (len < 4)

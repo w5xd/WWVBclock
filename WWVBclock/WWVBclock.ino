@@ -49,7 +49,7 @@
 
 #define DIM(x) sizeof(x)/sizeof(x[0])
 
-#define WWVBCLOCK_VERSION "1.16"
+#define WWVBCLOCK_VERSION "1.17"
 
 // Teensy 4.0 pin assignments
 namespace {  
