@@ -194,7 +194,7 @@ void ClockDisplay::displayRain(float rmm)
         {
             char *p = buf;
             dtostrf(inch, 1, inch < 1.0f ? 2 : (inch < 10.0f ? 1 : 0), buf);
-            while (*p == '0');
+            while (*p == '0')
                 p += 1;
             auto len = strlen(p);
             if (len < 4)
