@@ -68,16 +68,38 @@ void ClockDisplay::updateDisplay()
 bool ClockDisplay::scheduleDSTchangeAt(bool begins, time_t utcMidnight, uint8_t localHour)
 { // returns true if in past
     m_DstScheduledBegin = begins;
-    auto t = utcMidnight + utcSecondsOffset + 3600 * localHour;
+    auto t = utcMidnight - utcSecondsOffset + 3600 * localHour;
     if (!begins)
         t -= 3600;
+#if USE_SERIAL
+    auto min = minute(t);
+    auto hr = hour(t);
+    auto yr = year(t);
+    auto mo = month(t);
+    auto dy = day(t);
+    Serial.print("DST change at UTC:");
+    Serial.print(static_cast<int>(yr));
+    Serial.print('/');
+    Serial.print(static_cast<int>(mo));
+    Serial.print('/');
+    Serial.print(static_cast<int>(dy));
+    Serial.print(' ');
+    if (hr < 10)
+        Serial.print('0');
+    Serial.print(static_cast<int>(hr));
+    Serial.print(':');
+    if (min < 10)
+        Serial.print('0');
+    Serial.println(static_cast<int>(min));   
+#endif
+
     m_DstChangesWhen = t;
-    return (now()>t);
+    return now() >= t;
 }
 
 void ClockDisplay::setUtcMinutesOffset(int minutes)
 {
-    utcSecondsOffset = minutes * 60;
+    utcSecondsOffset = minutes * 60L;
     updateDisplay();
 }
 

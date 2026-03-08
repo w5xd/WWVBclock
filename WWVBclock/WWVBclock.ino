@@ -49,7 +49,7 @@
 
 #define DIM(x) sizeof(x)/sizeof(x[0])
 
-#define WWVBCLOCK_VERSION "1.17"
+#define WWVBCLOCK_VERSION "1.18"
 
 // Teensy 4.0 pin assignments
 namespace {  
@@ -336,19 +336,19 @@ static void dstScheduleFromWwvbToClock()
     if (clockDisplay.scheduleDSTchangeAt(Settings::DstScheduled == DstScheduled_t::BEGINS, 
         Settings::DstChangesWhen, Settings::DstLocalHour))
         {
+            Settings::dstInEffect = Settings::DstScheduled == DstScheduled_t::BEGINS ? 1 : 0;
+            EEPROM.put(static_cast<uint16_t>(EepromAddresses::DST_IN_EFFECT), dstInEffect);
             if (Settings::DstScheduled != DstScheduled_t::UNKNOWN)
             {
               #if USE_SERIAL
               Serial.println("DST scheduled in past. Clearing it");
               #endif
-              Settings::dstInEffect = Settings::DstScheduled == DstScheduled_t::BEGINS ? 1 : 0;
-              EEPROM.put(static_cast<uint16_t>(EepromAddresses::DST_IN_EFFECT), dstInEffect);
             }
             Settings::DstChangesWhen = 0;
             Settings::DstScheduled = DstScheduled_t::UNKNOWN;
             EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTSCHEDULED), Settings::DstScheduled);
             EEPROM.put(static_cast<uint16_t>(EepromAddresses::DSTCHANGESWHEN), Settings::DstChangesWhen);
-         }
+        }
 }
 
 void setup()
@@ -949,11 +949,14 @@ void loop()
             }
             dstScheduleFromWwvbToClock();
         }
-        auto dst = es100Wire.isDstNow() ? 1 : 0;
+        auto dst = es100Wire.isDstNow();
         if (dst >= 0)
         {
             if (dstInEffect != static_cast<uint8_t>(dst))
             {
+                #if USE_SERIAL
+                Serial.println(F("Updating DST_IN_EFFECT"));
+                #endif
                 dstInEffect = static_cast<uint8_t>(dst);
                 EEPROM.put(static_cast<uint16_t>(EepromAddresses::DST_IN_EFFECT), dstInEffect);
                 clockDisplay.setDST(dstInEffect != 0);

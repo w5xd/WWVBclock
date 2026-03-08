@@ -45,7 +45,7 @@ class ClockDisplay : public ClockNotification
         int lastDisplayedMinute;
         time_t lastTimet;
         bool radioSilence;
-        int utcSecondsOffset;
+        long utcSecondsOffset;
         bool DST;
         bool m_observeDST;
         bool m_DstScheduledBegin;
